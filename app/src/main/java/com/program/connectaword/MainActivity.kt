@@ -11,6 +11,9 @@ import androidx.navigation.compose.rememberNavController
 import com.program.connectaword.ui.auth.AuthViewModel
 import com.program.connectaword.ui.auth.LoginScreen
 import com.program.connectaword.ui.auth.RegisterScreen
+import com.program.connectaword.ui.lobby.CreateRoomScreen
+import com.program.connectaword.ui.lobby.GameLobbyScreen
+import com.program.connectaword.ui.lobby.LobbyViewModel
 import com.program.connectaword.ui.theme.ConnectaWordTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,8 +30,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    // Kreiramo jednu instancu AuthViewModel-a koju će deliti oba ekrana
     val authViewModel: AuthViewModel = viewModel()
+    val lobbyViewModel: LobbyViewModel = viewModel() // Create one instance here
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
@@ -37,6 +40,11 @@ fun AppNavigation() {
         composable("register") {
             RegisterScreen(navController = navController, authViewModel = authViewModel)
         }
-        // Ovde ćemo kasnije dodavati rute za ekrane unutar igre
+        composable("lobby") {
+            GameLobbyScreen(navController = navController, lobbyViewModel = lobbyViewModel)
+        }
+        composable("create_room") {
+            CreateRoomScreen(navController = navController, lobbyViewModel = lobbyViewModel)
+        }
     }
 }
