@@ -5,12 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.program.connectaword.ui.auth.AuthViewModel
 import com.program.connectaword.ui.auth.LoginScreen
 import com.program.connectaword.ui.auth.RegisterScreen
+import com.program.connectaword.ui.game.GameScreen
 import com.program.connectaword.ui.lobby.CreateRoomScreen
 import com.program.connectaword.ui.lobby.GameLobbyScreen
 import com.program.connectaword.ui.lobby.LobbyViewModel
@@ -31,7 +34,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
-    val lobbyViewModel: LobbyViewModel = viewModel() // Create one instance here
+    val lobbyViewModel: LobbyViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
@@ -45,6 +48,17 @@ fun AppNavigation() {
         }
         composable("create_room") {
             CreateRoomScreen(navController = navController, lobbyViewModel = lobbyViewModel)
+        }
+        composable(
+            route = "game_screen/{roomId}",
+            arguments = listOf(navArgument("roomId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val roomId = backStackEntry.arguments?.getString("roomId") ?: ""
+            GameScreen(
+                navController = navController,
+                roomId = roomId,
+                lobbyViewModel = lobbyViewModel
+            )
         }
     }
 }

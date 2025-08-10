@@ -1,5 +1,6 @@
 package com.program.connectaword.ui.lobby
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -45,14 +46,20 @@ fun GameLobbyScreen(
             } else if (lobbyState.error != null) {
                 Text(text = lobbyState.error!!)
             } else {
-                RoomList(rooms = lobbyState.rooms)
+                RoomList(
+                    rooms = lobbyState.rooms,
+                    onRoomClick = { roomId ->
+                        lobbyViewModel.joinRoom(roomId)
+                        navController.navigate("game_screen/$roomId")
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun RoomList(rooms: List<RoomResponse>) {
+fun RoomList(rooms: List<RoomResponse>, onRoomClick: (String) -> Unit) {
     if (rooms.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -67,16 +74,18 @@ fun RoomList(rooms: List<RoomResponse>) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(rooms) { room ->
-                RoomItem(room = room)
+                RoomItem(room = room, onClick = { onRoomClick(room.id) })
             }
         }
     }
 }
 
 @Composable
-fun RoomItem(room: RoomResponse) {
+fun RoomItem(room: RoomResponse, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() } // This makes the Card clickable
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = room.name, style = MaterialTheme.typography.titleLarge)
