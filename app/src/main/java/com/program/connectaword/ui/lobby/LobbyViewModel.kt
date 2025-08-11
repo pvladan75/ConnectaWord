@@ -80,7 +80,7 @@ class LobbyViewModel : ViewModel() {
         }
     }
 
-    fun createRoom(roomName: String) {
+    fun createRoom(roomName: String, language: String, wordSource: String) {
         val currentUserId = UserManager.currentUser?.id
         if (currentUserId == null) {
             _createRoomState.value = CreateRoomState(error = "User not logged in.")
@@ -89,12 +89,17 @@ class LobbyViewModel : ViewModel() {
 
         viewModelScope.launch {
             _createRoomState.value = CreateRoomState(isLoading = true)
-            val request = CreateRoomRequest(name = roomName, hostId = currentUserId)
+            val request = CreateRoomRequest(
+                name = roomName,
+                hostId = currentUserId,
+                language = language,
+                wordSource = wordSource
+            )
             try {
                 val response = lobbyRepository.createRoom(request)
                 if (response.isSuccessful) {
                     _createRoomState.value = CreateRoomState(success = true)
-                    getRooms()
+                    getRooms() // Refresh the room list after creating a new one
                 } else {
                     _createRoomState.value = CreateRoomState(error = "Failed to create room")
                 }
@@ -106,7 +111,6 @@ class LobbyViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Launch a coroutine to call the suspend function
         viewModelScope.launch {
             webSocketService.disconnect()
         }

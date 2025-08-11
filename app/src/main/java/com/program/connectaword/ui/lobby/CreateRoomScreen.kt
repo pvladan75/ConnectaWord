@@ -21,14 +21,14 @@ fun CreateRoomScreen(
     val createRoomState by lobbyViewModel.createRoomState.collectAsState()
     val context = LocalContext.current
 
+    val languages = listOf("English", "Serbian")
+    var selectedLanguage by remember { mutableStateOf(languages[0]) }
+
+    val wordSources = listOf("SERVER", "PLAYER_SUBMITTED")
+    var selectedWordSource by remember { mutableStateOf(wordSources[0]) }
+
     LaunchedEffect(createRoomState) {
-        if (createRoomState.success) {
-            Toast.makeText(context, "Room created!", Toast.LENGTH_SHORT).show()
-            navController.popBackStack()
-        }
-        if (createRoomState.error != null) {
-            Toast.makeText(context, createRoomState.error, Toast.LENGTH_LONG).show()
-        }
+        // ... same as before
     }
 
     Scaffold(
@@ -36,33 +36,87 @@ fun CreateRoomScreen(
             TopAppBar(title = { Text("Create New Room") })
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            OutlinedTextField(
+                value = roomName,
+                onValueChange = { roomName = it },
+                label = { Text("Room Name") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !createRoomState.isLoading
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Language Dropdown
+            SimpleDropdownMenu(
+                label = "Language",
+                options = languages,
+                selectedOption = selectedLanguage,
+                onOptionSelected = { selectedLanguage = it }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Word Source Dropdown
+            SimpleDropdownMenu(
+                label = "Word Source",
+                options = wordSources,
+                selectedOption = selectedWordSource,
+                onOptionSelected = { selectedWordSource = it }
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = { lobbyViewModel.createRoom(roomName, selectedLanguage, selectedWordSource) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !createRoomState.isLoading && roomName.isNotBlank()
             ) {
-                OutlinedTextField(
-                    value = roomName,
-                    onValueChange = { roomName = it }, // Corrected: onValueChange
-                    label = { Text("Room Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !createRoomState.isLoading
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = { lobbyViewModel.createRoom(roomName) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !createRoomState.isLoading && roomName.isNotBlank()
-                ) {
-                    Text("Create")
-                }
+                Text("Create")
             }
-            if (createRoomState.isLoading) {
-                CircularProgressIndicator()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SimpleDropdownMenu(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
             }
         }
     }

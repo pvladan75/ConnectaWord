@@ -6,7 +6,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateRoomRequest(
     val name: String,
-    val hostId: String
+    val hostId: String,
+    val language: String,
+    val wordSource: String
 )
 
 // This class represents a single game room received from the server
