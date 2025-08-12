@@ -4,9 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.program.connectaword.api.RetrofitInstance
 import com.program.connectaword.api.WebSocketService
-import com.program.connectaword.data.CreateRoomRequest
-import com.program.connectaword.data.RoomResponse
-import com.program.connectaword.data.UserManager
+import com.program.connectaword.data.*
 import com.program.connectaword.repository.LobbyRepository
 import com.program.connectaword.repository.LobbyRepositoryImpl
 import kotlinx.coroutines.Job
@@ -23,7 +21,7 @@ data class LobbyState(
 
 data class CreateRoomState(
     val isLoading: Boolean = false,
-    val success: Boolean = false,
+    val createdRoom: RoomResponse? = null,
     val error: String? = null
 )
 
@@ -38,8 +36,11 @@ class LobbyViewModel : ViewModel() {
     private val _createRoomState = MutableStateFlow(CreateRoomState())
     val createRoomState: StateFlow<CreateRoomState> = _createRoomState
 
-    private val _webSocketMessages = MutableStateFlow<List<String>>(emptyList())
-    val webSocketMessages = _webSocketMessages.asStateFlow()
+    private val _gameState = MutableStateFlow<GameState?>(null)
+    val gameState = _gameState.asStateFlow()
+
+    private val _announcements = MutableStateFlow<List<String>>(emptyList())
+    val announcements = _announcements.asStateFlow()
 
     init {
         getRooms()
@@ -48,19 +49,43 @@ class LobbyViewModel : ViewModel() {
 
     private fun observeWebSocketMessages() {
         viewModelScope.launch {
-            webSocketService.messages.collect { message ->
-                val currentMessages = _webSocketMessages.value.toMutableList()
-                currentMessages.add(message)
-                _webSocketMessages.value = currentMessages
+            webSocketService.messages.collect { gameMessage ->
+                when (gameMessage) {
+                    is GameStateUpdate -> {
+                        _gameState.value = gameMessage.gameState
+                    }
+                    is Announcement -> {
+                        val currentAnnouncements = _announcements.value.toMutableList()
+                        currentAnnouncements.add(0, gameMessage.message)
+                        _announcements.value = currentAnnouncements
+                    }
+                    else -> {
+                        // Игноришемо поруке које клијент не треба да прими
+                    }
+                }
             }
         }
     }
 
     fun joinRoom(roomId: String) {
         webSocketJob?.cancel()
-        _webSocketMessages.value = emptyList()
+        _gameState.value = null
+        _announcements.value = emptyList()
         webSocketJob = viewModelScope.launch {
             webSocketService.connect(roomId)
+        }
+    }
+
+    fun sendStartGameMessage() {
+        viewModelScope.launch {
+            // 👇 ИСПРАВКА ЈЕ ОВДЕ (додате су заграде) 👇
+            webSocketService.sendMessage(StartGame())
+        }
+    }
+
+    fun sendGuess(guess: String) {
+        viewModelScope.launch {
+            webSocketService.sendMessage(MakeGuess(guess))
         }
     }
 
@@ -89,17 +114,11 @@ class LobbyViewModel : ViewModel() {
 
         viewModelScope.launch {
             _createRoomState.value = CreateRoomState(isLoading = true)
-            val request = CreateRoomRequest(
-                name = roomName,
-                hostId = currentUserId,
-                language = language,
-                wordSource = wordSource
-            )
+            val request = CreateRoomRequest(name = roomName, hostId = currentUserId, language = language, wordSource = wordSource)
             try {
                 val response = lobbyRepository.createRoom(request)
-                if (response.isSuccessful) {
-                    _createRoomState.value = CreateRoomState(success = true)
-                    getRooms() // Refresh the room list after creating a new one
+                if (response.isSuccessful && response.body() != null) {
+                    _createRoomState.value = CreateRoomState(createdRoom = response.body()!!)
                 } else {
                     _createRoomState.value = CreateRoomState(error = "Failed to create room")
                 }
@@ -107,6 +126,10 @@ class LobbyViewModel : ViewModel() {
                 _createRoomState.value = CreateRoomState(error = e.message ?: "An unknown error occurred")
             }
         }
+    }
+
+    fun onRoomCreationHandled() {
+        _createRoomState.value = CreateRoomState()
     }
 
     override fun onCleared() {

@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.program.connectaword.data.UserManager
 import com.program.connectaword.ui.auth.AuthViewModel
 import com.program.connectaword.ui.auth.LoginScreen
 import com.program.connectaword.ui.auth.RegisterScreen
@@ -36,7 +37,18 @@ fun AppNavigation() {
     val authViewModel: AuthViewModel = viewModel()
     val lobbyViewModel: LobbyViewModel = viewModel()
 
-    NavHost(navController = navController, startDestination = "login") {
+    // Проверавамо да ли постоји активна сесија
+    val sessionManager = App.instance.sessionManager
+    val startDestination = if (sessionManager.getActiveToken() != null) {
+        // Ако постоји, учитавамо корисника и идемо у лоби
+        UserManager.currentUser = sessionManager.getActiveUser()
+        "lobby"
+    } else {
+        // Ако не постоји, идемо на пријаву
+        "login"
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
             LoginScreen(navController = navController, authViewModel = authViewModel)
         }

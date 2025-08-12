@@ -7,7 +7,7 @@ import retrofit2.Response
 
 interface LobbyRepository {
     suspend fun getRooms(): Response<List<RoomResponse>>
-    suspend fun createRoom(createRoomRequest: CreateRoomRequest): Response<Unit>
+    suspend fun createRoom(createRoomRequest: CreateRoomRequest): Response<RoomResponse>
 }
 
 class LobbyRepositoryImpl(
@@ -17,7 +17,7 @@ class LobbyRepositoryImpl(
         return apiService.getRooms()
     }
 
-    override suspend fun createRoom(createRoomRequest: CreateRoomRequest): Response<Unit> {
+    override suspend fun createRoom(createRoomRequest: CreateRoomRequest): Response<RoomResponse> {
         return apiService.createRoom(createRoomRequest)
     }
 }

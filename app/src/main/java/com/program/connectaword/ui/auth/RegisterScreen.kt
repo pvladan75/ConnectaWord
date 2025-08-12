@@ -28,14 +28,16 @@ fun RegisterScreen(
     LaunchedEffect(authState) {
         if (authState.isRegistrationSuccessful) {
             Toast.makeText(context, "Registracija uspešna! Molimo prijavite se.", Toast.LENGTH_LONG).show()
-            // Vrati korisnika na login ekran nakon uspešne registracije
             navController.navigate("login") {
-                // Očisti back stack da ne može da se vrati na registraciju
                 popUpTo("login") { inclusive = true }
             }
+            // Ресетујемо стање
+            authViewModel.resetAuthState()
         }
         if (authState.error != null) {
             Toast.makeText(context, "Greška: ${authState.error}", Toast.LENGTH_LONG).show()
+            // Ресетујемо стање
+            authViewModel.resetAuthState()
         }
     }
 
@@ -80,7 +82,7 @@ fun RegisterScreen(
                     authViewModel.register(korisnickoIme, email, lozinka)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !authState.isLoading // Onemogući dugme dok se učitava
+                enabled = !authState.isLoading
             ) {
                 Text("Registruj se")
             }

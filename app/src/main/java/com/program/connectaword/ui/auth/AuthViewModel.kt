@@ -2,10 +2,10 @@ package com.program.connectaword.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.program.connectaword.App
 import com.program.connectaword.api.RetrofitInstance
 import com.program.connectaword.data.LoginRequest
 import com.program.connectaword.data.RegisterRequest
-import com.program.connectaword.data.UserManager
 import com.program.connectaword.repository.AuthRepository
 import com.program.connectaword.repository.AuthRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,8 +54,8 @@ class AuthViewModel : ViewModel() {
                 val request = LoginRequest(email, lozinka)
                 val response = authRepository.login(request)
                 if (response.isSuccessful && response.body() != null) {
-                    // Save the logged-in user to our UserManager
-                    UserManager.currentUser = response.body()!!.korisnik
+                    val authResponse = response.body()!!
+                    App.instance.sessionManager.saveSession(authResponse.token, authResponse.korisnik)
                     _authState.value = AuthState(isLoginSuccessful = true)
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Netačan email ili lozinka"
@@ -64,8 +64,13 @@ class AuthViewModel : ViewModel() {
             } catch (e: IOException) {
                 _authState.value = AuthState(error = "Greška sa mrežom: ${e.message}")
             } catch (e: Exception) {
-                _authState.value = AuthState(error = "Došlo je do greške: ${e.message}")
+                _authState.value = AuthState(error = "Došlo је do greške: ${e.message}")
             }
         }
+    }
+
+    // 👇 НОВА ФУНКЦИЈА 👇
+    fun resetAuthState() {
+        _authState.value = AuthState()
     }
 }

@@ -28,7 +28,26 @@ fun CreateRoomScreen(
     var selectedWordSource by remember { mutableStateOf(wordSources[0]) }
 
     LaunchedEffect(createRoomState) {
-        // ... same as before
+        // Check if a room object is available
+        createRoomState.createdRoom?.let { room ->
+            Toast.makeText(context, "Room '${room.name}' created! Joining...", Toast.LENGTH_SHORT).show()
+
+            // Join the room via WebSocket
+            lobbyViewModel.joinRoom(room.id)
+
+            // Navigate to the game screen and clear the back stack up to the lobby
+            navController.navigate("game_screen/${room.id}") {
+                popUpTo("lobby")
+            }
+
+            // Reset the state in the ViewModel to prevent this from triggering again
+            lobbyViewModel.onRoomCreationHandled()
+        }
+
+        if (createRoomState.error != null) {
+            Toast.makeText(context, createRoomState.error, Toast.LENGTH_LONG).show()
+            lobbyViewModel.onRoomCreationHandled()
+        }
     }
 
     Scaffold(
@@ -53,7 +72,6 @@ fun CreateRoomScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Language Dropdown
             SimpleDropdownMenu(
                 label = "Language",
                 options = languages,
@@ -62,7 +80,6 @@ fun CreateRoomScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Word Source Dropdown
             SimpleDropdownMenu(
                 label = "Word Source",
                 options = wordSources,

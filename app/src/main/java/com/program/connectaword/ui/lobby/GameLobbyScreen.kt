@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.program.connectaword.App
 import com.program.connectaword.data.RoomResponse
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,7 +30,22 @@ fun GameLobbyScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Game Lobby") })
+            TopAppBar(
+                title = { Text("Game Lobby") },
+                actions = {
+                    IconButton(onClick = {
+                        App.instance.sessionManager.clearSession()
+                        navController.navigate("login") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }) {
+                        Icon(Icons.Default.Logout, contentDescription = "Logout")
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("create_room") }) {
@@ -85,7 +103,7 @@ fun RoomItem(room: RoomResponse, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() } // This makes the Card clickable
+            .clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = room.name, style = MaterialTheme.typography.titleLarge)

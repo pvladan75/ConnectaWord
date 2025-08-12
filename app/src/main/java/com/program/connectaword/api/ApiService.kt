@@ -22,5 +22,5 @@ interface ApiService {
     suspend fun getRooms(): Response<List<RoomResponse>>
 
     @POST("create-room")
-    suspend fun createRoom(@Body request: CreateRoomRequest): Response<Unit>
+    suspend fun createRoom(@Body request: CreateRoomRequest): Response<RoomResponse>
 }

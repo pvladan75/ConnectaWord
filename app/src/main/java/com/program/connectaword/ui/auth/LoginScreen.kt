@@ -27,13 +27,16 @@ fun LoginScreen(
     LaunchedEffect(authState) {
         if (authState.isLoginSuccessful) {
             Toast.makeText(context, "Prijava uspešna!", Toast.LENGTH_LONG).show()
-            // Navigate to the lobby and clear the back stack so the user can't go back to login
             navController.navigate("lobby") {
                 popUpTo("login") { inclusive = true }
             }
+            // Ресетујемо стање да се ово не би поново покренуло
+            authViewModel.resetAuthState()
         }
         if (authState.error != null) {
             Toast.makeText(context, "Greška: ${authState.error}", Toast.LENGTH_LONG).show()
+            // Такође ресетујемо стање након приказа грешке
+            authViewModel.resetAuthState()
         }
     }
 

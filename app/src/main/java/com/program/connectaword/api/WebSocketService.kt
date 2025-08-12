@@ -1,5 +1,8 @@
 package com.program.connectaword.api
 
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
+import com.program.connectaword.data.*
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -8,9 +11,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 class WebSocketService {
-    private val _messages = MutableSharedFlow<String>()
+    private val _messages = MutableSharedFlow<GameMessage>()
     val messages = _messages.asSharedFlow()
 
+    private val gson = Gson()
     private val client = HttpClient {
         install(WebSockets)
     }
@@ -25,20 +29,31 @@ class WebSocketService {
             session?.let {
                 for (frame in it.incoming) {
                     if (frame is Frame.Text) {
-                        _messages.emit(frame.readText())
+                        val jsonString = frame.readText()
+                        try {
+                            // Покушавамо да десеријализујемо у познате типове
+                            val gameMessage = when {
+                                jsonString.contains("gameState") -> gson.fromJson(jsonString, GameStateUpdate::class.java)
+                                jsonString.contains("message") -> gson.fromJson(jsonString, Announcement::class.java)
+                                else -> null
+                            }
+                            gameMessage?.let { msg -> _messages.emit(msg) }
+                        } catch (e: JsonSyntaxException) {
+                            println("Error parsing WebSocket message: ${e.message}")
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
-            _messages.emit("Error: ${e.message}")
+            println("WebSocket connection error: ${e.message}")
         }
     }
 
-    suspend fun sendMessage(message: String) {
-        session?.send(Frame.Text(message))
+    suspend fun sendMessage(message: GameMessage) {
+        val jsonString = gson.toJson(message)
+        session?.send(Frame.Text(jsonString))
     }
 
-    // Add the 'suspend' keyword here
     suspend fun disconnect() {
         session?.close()
         session = null
