@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,6 +28,13 @@ fun GameLobbyScreen(
     lobbyViewModel: LobbyViewModel = viewModel()
 ) {
     val lobbyState by lobbyViewModel.lobbyState.collectAsState()
+
+    // 👇 НОВИ БЛОК 👇
+    // Овај блок ће се покренути сваки пут када се екран појави
+    // и затражиће од ViewModel-а да поново учита собе.
+    LaunchedEffect(Unit) {
+        lobbyViewModel.getRooms()
+    }
 
     Scaffold(
         topBar = {
@@ -53,16 +61,20 @@ fun GameLobbyScreen(
             }
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (lobbyState.isLoading) {
-                CircularProgressIndicator()
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             } else if (lobbyState.error != null) {
-                Text(text = lobbyState.error!!)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = lobbyState.error!!)
+                }
             } else {
                 RoomList(
                     rooms = lobbyState.rooms,
@@ -105,9 +117,25 @@ fun RoomItem(room: RoomResponse, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = room.name, style = MaterialTheme.typography.titleLarge)
-            Text(text = "Hosted by: ${room.hostId}", style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = room.name, style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Hosted by: ${room.hostUsername} (${room.hostRating})",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = room.language.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

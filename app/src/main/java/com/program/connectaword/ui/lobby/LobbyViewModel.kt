@@ -1,16 +1,15 @@
 package com.program.connectaword.ui.lobby
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.program.connectaword.api.RetrofitInstance
+import com.program.connectaword.api.ApiClient
 import com.program.connectaword.api.WebSocketService
 import com.program.connectaword.data.*
 import com.program.connectaword.repository.LobbyRepository
 import com.program.connectaword.repository.LobbyRepositoryImpl
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class LobbyState(
@@ -26,7 +25,7 @@ data class CreateRoomState(
 )
 
 class LobbyViewModel : ViewModel() {
-    private val lobbyRepository: LobbyRepository = LobbyRepositoryImpl(RetrofitInstance.api)
+    private val lobbyRepository: LobbyRepository by lazy { LobbyRepositoryImpl(ApiClient.getApiService()) }
     private val webSocketService = WebSocketService()
     private var webSocketJob: Job? = null
 
@@ -50,17 +49,19 @@ class LobbyViewModel : ViewModel() {
     private fun observeWebSocketMessages() {
         viewModelScope.launch {
             webSocketService.messages.collect { gameMessage ->
+                Log.d("LobbyViewModel", "Received GameMessage: $gameMessage")
+
                 when (gameMessage) {
                     is GameStateUpdate -> {
                         _gameState.value = gameMessage.gameState
                     }
                     is Announcement -> {
-                        val currentAnnouncements = _announcements.value.toMutableList()
-                        currentAnnouncements.add(0, gameMessage.message)
-                        _announcements.value = currentAnnouncements
+                        _announcements.update { currentAnnouncements ->
+                            listOf(gameMessage.message) + currentAnnouncements
+                        }
                     }
                     else -> {
-                        // Игноришемо поруке које клијент не треба да прими
+                        Log.w("LobbyViewModel", "Received unexpected message type: $gameMessage")
                     }
                 }
             }
@@ -76,16 +77,14 @@ class LobbyViewModel : ViewModel() {
         }
     }
 
-    fun sendStartGameMessage() {
-        viewModelScope.launch {
-            // 👇 ИСПРАВКА ЈЕ ОВДЕ (додате су заграде) 👇
-            webSocketService.sendMessage(StartGame())
-        }
-    }
+    fun sendStartGameMessage() = sendMessage(StartGame())
+    fun sendPlayAgainMessage() = sendMessage(PlayAgain())
+    fun sendGuess(guess: String) = sendMessage(MakeGuess(guess))
+    fun sendSurrenderMessage() = sendMessage(SurrenderRound())
 
-    fun sendGuess(guess: String) {
+    private fun sendMessage(message: GameMessage) {
         viewModelScope.launch {
-            webSocketService.sendMessage(MakeGuess(guess))
+            webSocketService.sendMessage(message)
         }
     }
 
@@ -120,7 +119,8 @@ class LobbyViewModel : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     _createRoomState.value = CreateRoomState(createdRoom = response.body()!!)
                 } else {
-                    _createRoomState.value = CreateRoomState(error = "Failed to create room")
+                    val errorMsg = response.errorBody()?.string() ?: "Failed to create room"
+                    _createRoomState.value = CreateRoomState(error = errorMsg)
                 }
             } catch (e: Exception) {
                 _createRoomState.value = CreateRoomState(error = e.message ?: "An unknown error occurred")
@@ -136,6 +136,16 @@ class LobbyViewModel : ViewModel() {
         super.onCleared()
         viewModelScope.launch {
             webSocketService.disconnect()
+        }
+    }
+
+    fun clearLastAnnouncement() {
+        _announcements.update { currentAnnouncements ->
+            if (currentAnnouncements.isNotEmpty()) {
+                currentAnnouncements.drop(1)
+            } else {
+                emptyList()
+            }
         }
     }
 }

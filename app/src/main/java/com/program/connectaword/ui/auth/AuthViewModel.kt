@@ -3,7 +3,7 @@ package com.program.connectaword.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.program.connectaword.App
-import com.program.connectaword.api.RetrofitInstance
+import com.program.connectaword.api.ApiClient
 import com.program.connectaword.data.LoginRequest
 import com.program.connectaword.data.RegisterRequest
 import com.program.connectaword.repository.AuthRepository
@@ -22,7 +22,14 @@ data class AuthState(
 
 class AuthViewModel : ViewModel() {
 
-    private val authRepository: AuthRepository = AuthRepositoryImpl(RetrofitInstance.api)
+    // 👇 1. ISPRAVKA JE OVDE 👇
+    // Sada kreiramo AuthRepositoryImpl sa oba potrebna parametra
+    private val authRepository: AuthRepository by lazy {
+        AuthRepositoryImpl(
+            apiService = ApiClient.getApiService(),
+            sessionManager = App.instance.sessionManager
+        )
+    }
 
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState
@@ -32,6 +39,7 @@ class AuthViewModel : ViewModel() {
             _authState.value = AuthState(isLoading = true)
             try {
                 val request = RegisterRequest(korisnickoIme, email, lozinka)
+                // Repozitorijum sada sam čuva sesiju
                 val response = authRepository.register(request)
                 if (response.isSuccessful && response.body() != null) {
                     _authState.value = AuthState(isRegistrationSuccessful = true)
@@ -52,10 +60,11 @@ class AuthViewModel : ViewModel() {
             _authState.value = AuthState(isLoading = true)
             try {
                 val request = LoginRequest(email, lozinka)
+                // Repozitorijum sada sam čuva sesiju
                 val response = authRepository.login(request)
                 if (response.isSuccessful && response.body() != null) {
-                    val authResponse = response.body()!!
-                    App.instance.sessionManager.saveSession(authResponse.token, authResponse.korisnik)
+                    // 👇 2. UKLONILI SMO DUPLU LOGIKU ODAVDE 👇
+                    // App.instance.sessionManager.saveSession(...) više nije potrebno ovde
                     _authState.value = AuthState(isLoginSuccessful = true)
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Netačan email ili lozinka"
@@ -69,7 +78,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // 👇 НОВА ФУНКЦИЈА 👇
     fun resetAuthState() {
         _authState.value = AuthState()
     }

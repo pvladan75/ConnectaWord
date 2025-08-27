@@ -2,6 +2,7 @@ package com.program.connectaword.api
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import com.program.connectaword.App // <-- ДОДАЈ ОВАЈ IMPORT
 import com.program.connectaword.data.*
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
@@ -23,15 +24,26 @@ class WebSocketService {
 
     suspend fun connect(roomId: String) {
         try {
-            session = client.webSocketSession {
-                url("ws://10.0.2.2:8080/ws/game/$roomId")
+            // 👇 КЉУЧНА ИЗМЕНА ЈЕ ОВДЕ 👇
+            // 1. Узимамо токен из SessionManager-а
+            val token = App.instance.sessionManager.getActiveToken()
+            if (token == null) {
+                println("WebSocket connection error: No active token found!")
+                // Овде бисмо могли емитовати и неку грешку ка UI-у
+                return
             }
+
+            session = client.webSocketSession {
+                val ipAddress = ServerConfig.serverIp
+                // 2. Додајемо токен као query параметар у URL
+                url("ws://$ipAddress:8080/ws/game/$roomId?token=$token")
+            }
+
             session?.let {
                 for (frame in it.incoming) {
                     if (frame is Frame.Text) {
                         val jsonString = frame.readText()
                         try {
-                            // Покушавамо да десеријализујемо у познате типове
                             val gameMessage = when {
                                 jsonString.contains("gameState") -> gson.fromJson(jsonString, GameStateUpdate::class.java)
                                 jsonString.contains("message") -> gson.fromJson(jsonString, Announcement::class.java)

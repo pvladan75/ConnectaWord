@@ -4,24 +4,38 @@ import com.program.connectaword.api.ApiService
 import com.program.connectaword.data.AuthResponse
 import com.program.connectaword.data.LoginRequest
 import com.program.connectaword.data.RegisterRequest
+import com.program.connectaword.data.SessionManager
 import retrofit2.Response
 
-// Definišemo interfejs da bismo lakše testirali i menjali implementacije
 interface AuthRepository {
     suspend fun register(registerRequest: RegisterRequest): Response<AuthResponse>
     suspend fun login(loginRequest: LoginRequest): Response<AuthResponse>
 }
 
-// Kreiramo konkretnu implementaciju koja koristi naš ApiService
 class AuthRepositoryImpl(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val sessionManager: SessionManager // Dodajemo SessionManager
 ) : AuthRepository {
 
     override suspend fun register(registerRequest: RegisterRequest): Response<AuthResponse> {
-        return apiService.register(registerRequest)
+        val response = apiService.register(registerRequest)
+        // Ako je registracija uspešna, odmah čuvamo sesiju (korisnik je ulogovan)
+        if (response.isSuccessful) {
+            response.body()?.let { authResponse ->
+                sessionManager.saveSession(authResponse.token, authResponse.korisnik)
+            }
+        }
+        return response
     }
 
     override suspend fun login(loginRequest: LoginRequest): Response<AuthResponse> {
-        return apiService.login(loginRequest)
+        val response = apiService.login(loginRequest)
+        // Ako je prijava uspešna, čuvamo sesiju
+        if (response.isSuccessful) {
+            response.body()?.let { authResponse ->
+                sessionManager.saveSession(authResponse.token, authResponse.korisnik)
+            }
+        }
+        return response
     }
 }

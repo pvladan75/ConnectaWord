@@ -12,6 +12,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.program.connectaword.Routes
 
 @Composable
 fun RegisterScreen(
@@ -27,16 +28,16 @@ fun RegisterScreen(
 
     LaunchedEffect(authState) {
         if (authState.isRegistrationSuccessful) {
-            Toast.makeText(context, "Registracija uspešna! Molimo prijavite se.", Toast.LENGTH_LONG).show()
-            navController.navigate("login") {
-                popUpTo("login") { inclusive = true }
+            // 👇 POBOLJŠANO KORISNIČKO ISKUSTVO 👇
+            Toast.makeText(context, "Registracija i prijava uspešni!", Toast.LENGTH_LONG).show()
+            // Korisnik je sada automatski ulogovan i ide u lobi
+            navController.navigate(Routes.MAIN_GRAPH) {
+                popUpTo(Routes.AUTH_GRAPH) { inclusive = true }
             }
-            // Ресетујемо стање
             authViewModel.resetAuthState()
         }
         if (authState.error != null) {
             Toast.makeText(context, "Greška: ${authState.error}", Toast.LENGTH_LONG).show()
-            // Ресетујемо стање
             authViewModel.resetAuthState()
         }
     }
@@ -89,7 +90,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Već imaš nalog? Prijavi se",
-                modifier = Modifier.clickable { navController.navigate("login") },
+                modifier = Modifier.clickable { navController.navigate(Routes.LOGIN) },
                 color = MaterialTheme.colorScheme.primary
             )
         }

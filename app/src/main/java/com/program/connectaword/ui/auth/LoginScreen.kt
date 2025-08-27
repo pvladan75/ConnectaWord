@@ -12,6 +12,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.program.connectaword.Routes
 
 @Composable
 fun LoginScreen(
@@ -27,15 +28,13 @@ fun LoginScreen(
     LaunchedEffect(authState) {
         if (authState.isLoginSuccessful) {
             Toast.makeText(context, "Prijava uspešna!", Toast.LENGTH_LONG).show()
-            navController.navigate("lobby") {
-                popUpTo("login") { inclusive = true }
+            navController.navigate(Routes.MAIN_GRAPH) {
+                popUpTo(Routes.AUTH_GRAPH) { inclusive = true }
             }
-            // Ресетујемо стање да се ово не би поново покренуло
             authViewModel.resetAuthState()
         }
         if (authState.error != null) {
             Toast.makeText(context, "Greška: ${authState.error}", Toast.LENGTH_LONG).show()
-            // Такође ресетујемо стање након приказа грешке
             authViewModel.resetAuthState()
         }
     }
@@ -78,7 +77,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Nemaš nalog? Registruj se",
-                modifier = Modifier.clickable { navController.navigate("register") },
+                modifier = Modifier.clickable { navController.navigate(Routes.REGISTER) },
                 color = MaterialTheme.colorScheme.primary
             )
         }
