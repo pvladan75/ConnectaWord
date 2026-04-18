@@ -1,5 +1,8 @@
 package com.program.connectaword.data
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class CreateRoomRequest(
     val name: String,
     val hostId: String,
@@ -7,6 +10,7 @@ data class CreateRoomRequest(
     val wordSource: String
 )
 
+@Serializable
 data class RoomResponse(
     val id: String,
     val name: String,

@@ -25,7 +25,10 @@ import com.program.connectaword.ui.lobby.CreateRoomScreen
 import com.program.connectaword.ui.lobby.GameLobbyScreen
 import com.program.connectaword.ui.lobby.LobbyViewModel
 import com.program.connectaword.ui.theme.ConnectaWordTheme
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.hilt.navigation.compose.hiltViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,11 +69,11 @@ fun AppNavigation() {
 fun NavGraphBuilder.authGraph(navController: NavHostController) {
     navigation(startDestination = Routes.LOGIN, route = Routes.AUTH_GRAPH) {
         composable(Routes.LOGIN) {
-            val authViewModel: AuthViewModel = viewModel()
+            val authViewModel: AuthViewModel = hiltViewModel()
             LoginScreen(navController = navController, authViewModel = authViewModel)
         }
         composable(Routes.REGISTER) {
-            val authViewModel: AuthViewModel = viewModel()
+            val authViewModel: AuthViewModel = hiltViewModel()
             RegisterScreen(navController = navController, authViewModel = authViewModel)
         }
     }
@@ -108,9 +111,9 @@ fun NavGraphBuilder.mainGraph(navController: NavHostController) {
 inline fun <reified T : ViewModel> NavBackStackEntry.sharedViewModel(
     navController: NavHostController,
 ): T {
-    val navGraphRoute = destination.parent?.route ?: return viewModel()
+    val navGraphRoute = destination.parent?.route ?: return hiltViewModel()
     val parentEntry = remember(this) {
         navController.getBackStackEntry(navGraphRoute)
     }
-    return viewModel(parentEntry)
+    return hiltViewModel(parentEntry)
 }

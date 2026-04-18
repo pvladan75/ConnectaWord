@@ -2,16 +2,15 @@ package com.program.connectaword.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.program.connectaword.App
-import com.program.connectaword.api.ApiClient
 import com.program.connectaword.data.LoginRequest
 import com.program.connectaword.data.RegisterRequest
 import com.program.connectaword.repository.AuthRepository
-import com.program.connectaword.repository.AuthRepositoryImpl
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.IOException
+import javax.inject.Inject
 
 data class AuthState(
     val isLoading: Boolean = false,
@@ -20,16 +19,10 @@ data class AuthState(
     val isLoginSuccessful: Boolean = false
 )
 
-class AuthViewModel : ViewModel() {
-
-    // 👇 1. ISPRAVKA JE OVDE 👇
-    // Sada kreiramo AuthRepositoryImpl sa oba potrebna parametra
-    private val authRepository: AuthRepository by lazy {
-        AuthRepositoryImpl(
-            apiService = ApiClient.getApiService(),
-            sessionManager = App.instance.sessionManager
-        )
-    }
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState

@@ -10,22 +10,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.program.connectaword.App
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.program.connectaword.Routes
-import com.program.connectaword.api.ApiClient
 
 @Composable
-fun WelcomeScreen(navController: NavController) {
-    val sessionManager = App.instance.sessionManager
+fun WelcomeScreen(
+    navController: NavController,
+    welcomeViewModel: WelcomeViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
 
     // Покушавамо да учитамо последњу IP или поставимо подразумевану
-    var customIp by remember { mutableStateOf(sessionManager.getLastUsedIp() ?: "192.168.0.23") }
+    var customIp by remember { mutableStateOf(welcomeViewModel.getLastUsedIp() ?: "192.168.0.23") }
     val radioOptions = listOf("Emulator", "Physical Device")
     // Покушавамо да запамтимо последњи избор уређаја
     var selectedOption by remember {
         mutableStateOf(
-            when (sessionManager.getLastUsedIp()) {
+            when (welcomeViewModel.getLastUsedIp()) {
                 "10.0.2.2" -> "Emulator"
                 null -> null
                 else -> "Physical Device"
@@ -35,9 +36,9 @@ fun WelcomeScreen(navController: NavController) {
 
     // LaunchedEffect се извршава само једном када се екран покрене
     LaunchedEffect(Unit) {
-        val activeUser = sessionManager.getActiveUser()
+        val activeUser = welcomeViewModel.getActiveUser()
         // Ако постоји сачуван корисник И сачувана IP адреса, улогуј га аутоматски
-        if (activeUser != null && sessionManager.getLastUsedIp() != null) {
+        if (activeUser != null && welcomeViewModel.getLastUsedIp() != null) {
             Toast.makeText(context, "Welcome back, ${activeUser.korisnickoIme}!", Toast.LENGTH_SHORT).show()
             navController.navigate(Routes.MAIN_GRAPH) {
                 popUpTo(Routes.WELCOME) { inclusive = true }
@@ -48,9 +49,8 @@ fun WelcomeScreen(navController: NavController) {
     val onContinueClicked = {
         val ipAddress = if (selectedOption == "Emulator") "10.0.2.2" else customIp
 
-        // Чувамо изабрану IP адресу за следећи пут и иницијализујемо ApiClient
-        sessionManager.saveIpAddress(ipAddress)
-        ApiClient.initialize(ipAddress)
+        // Чувамо изабрану IP адресу за следећи пут
+        welcomeViewModel.saveIpAddress(ipAddress)
 
         // Навигација ка екрану за пријаву
         navController.navigate(Routes.AUTH_GRAPH) {

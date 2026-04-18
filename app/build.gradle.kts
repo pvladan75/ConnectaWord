@@ -2,17 +2,19 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.20" apply false
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "com.program.connectaword"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.program.connectaword"
         minSdk = 27
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -50,10 +52,17 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.datastore)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // Retrofit
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+    implementation(libs.converter.kotlinx.serialization)
     implementation(libs.logging.interceptor)
 
     // Ktor Client
@@ -70,6 +79,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
 
     implementation(libs.androidx.security.crypto)
 

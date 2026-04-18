@@ -1,14 +1,14 @@
 package com.program.connectaword.data
 
-import kotlinx.serialization.Serializable // <-- ДОДАЈ ОВАЈ IMPORT
+import kotlinx.serialization.Serializable
 
-@Serializable // <-- ДОДАЈ ОВУ АНОТАЦИЈУ
+@Serializable
 data class AuthResponse(
     val token: String,
     val korisnik: User
 )
 
-@Serializable // <-- И ОВДЕ ДОДАЈ АНОТАЦИЈУ
+@Serializable
 data class User(
     val id: String,
     val korisnickoIme: String,

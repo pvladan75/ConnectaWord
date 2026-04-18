@@ -1,56 +1,56 @@
 package com.program.connectaword.api
 
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
-import com.program.connectaword.App // <-- ДОДАЈ ОВАЈ IMPORT
-import com.program.connectaword.data.*
+import com.program.connectaword.data.Announcement
+import com.program.connectaword.data.GameMessage
+import com.program.connectaword.data.GameStateUpdate
+import com.program.connectaword.data.SessionManager
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class WebSocketService {
-    private val _messages = MutableSharedFlow<GameMessage>()
+@Singleton
+class WebSocketService @Inject constructor(
+    private val sessionManager: SessionManager,
+    private val json: Json,
+    private val client: HttpClient
+) {
+    private val _messages = MutableSharedFlow<GameMessage>(replay = 1)
     val messages = _messages.asSharedFlow()
-
-    private val gson = Gson()
-    private val client = HttpClient {
-        install(WebSockets)
-    }
 
     private var session: WebSocketSession? = null
 
     suspend fun connect(roomId: String) {
         try {
-            // 👇 КЉУЧНА ИЗМЕНА ЈЕ ОВДЕ 👇
-            // 1. Узимамо токен из SessionManager-а
-            val token = App.instance.sessionManager.getActiveToken()
+            val token = sessionManager.getActiveToken()
             if (token == null) {
                 println("WebSocket connection error: No active token found!")
-                // Овде бисмо могли емитовати и неку грешку ка UI-у
                 return
             }
 
             session = client.webSocketSession {
                 val ipAddress = ServerConfig.serverIp
-                // 2. Додајемо токен као query параметар у URL
                 url("ws://$ipAddress:8080/ws/game/$roomId?token=$token")
             }
 
-            session?.let {
-                for (frame in it.incoming) {
+            session?.let { socketSession ->
+                for (frame in socketSession.incoming) {
                     if (frame is Frame.Text) {
                         val jsonString = frame.readText()
                         try {
-                            val gameMessage = when {
-                                jsonString.contains("gameState") -> gson.fromJson(jsonString, GameStateUpdate::class.java)
-                                jsonString.contains("message") -> gson.fromJson(jsonString, Announcement::class.java)
+                            val gameMessage: GameMessage? = when {
+                                jsonString.contains("gameState") -> json.decodeFromString<GameStateUpdate>(jsonString)
+                                jsonString.contains("message") -> json.decodeFromString<Announcement>(jsonString)
                                 else -> null
                             }
                             gameMessage?.let { msg -> _messages.emit(msg) }
-                        } catch (e: JsonSyntaxException) {
+                        } catch (e: Exception) {
                             println("Error parsing WebSocket message: ${e.message}")
                         }
                     }
@@ -62,7 +62,7 @@ class WebSocketService {
     }
 
     suspend fun sendMessage(message: GameMessage) {
-        val jsonString = gson.toJson(message)
+        val jsonString = json.encodeToString(message)
         session?.send(Frame.Text(jsonString))
     }
 

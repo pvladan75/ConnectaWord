@@ -7,14 +7,16 @@ import com.program.connectaword.data.RegisterRequest
 import com.program.connectaword.data.SessionManager
 import retrofit2.Response
 
+import javax.inject.Inject
+
 interface AuthRepository {
     suspend fun register(registerRequest: RegisterRequest): Response<AuthResponse>
     suspend fun login(loginRequest: LoginRequest): Response<AuthResponse>
 }
 
-class AuthRepositoryImpl(
+class AuthRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
-    private val sessionManager: SessionManager // Dodajemo SessionManager
+    private val sessionManager: SessionManager
 ) : AuthRepository {
 
     override suspend fun register(registerRequest: RegisterRequest): Response<AuthResponse> {

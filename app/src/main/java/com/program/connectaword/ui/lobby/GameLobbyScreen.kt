@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import com.program.connectaword.App
 import com.program.connectaword.data.RoomResponse
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,7 +41,7 @@ fun GameLobbyScreen(
                 title = { Text("Game Lobby") },
                 actions = {
                     IconButton(onClick = {
-                        App.instance.sessionManager.clearSession()
+                        lobbyViewModel.logout()
                         navController.navigate("login") {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 inclusive = true

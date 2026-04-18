@@ -2,41 +2,17 @@ package com.program.connectaword.ui.game
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -88,6 +64,13 @@ fun GameScreen(
                         lobbyViewModel.sendStartGameMessage()
                     }
                 }
+                // --- NOVI EKRAN ZA UNOS REČI ---
+                "SUBMITTING_WORDS" -> {
+                    WordSubmissionView(
+                        state = gameState!!,
+                        onSubmitWord = { word -> lobbyViewModel.sendSubmitWordMessage(word) }
+                    )
+                }
                 "IN_PROGRESS" -> {
                     InProgressView(
                         state = gameState!!,
@@ -111,6 +94,74 @@ fun GameScreen(
         }
     }
 }
+
+// --- CEO NOVI COMOSABLE ZA UNOS REČI ---
+@Composable
+fun WordSubmissionView(
+    state: com.program.connectaword.data.GameState,
+    onSubmitWord: (String) -> Unit
+) {
+    val currentUserId = UserManager.currentUser?.id
+    var word by remember { mutableStateOf("") }
+    val mySubmissionStatus = state.submissionInfo?.get(currentUserId) == true
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+        Text("Submit a Word", style = MaterialTheme.typography.headlineMedium)
+        Text("Each player submits one word for others to guess.", style = MaterialTheme.typography.bodyMedium)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Prikaz statusa svih igrača
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                state.players.forEach { player ->
+                    val hasSubmitted = state.submissionInfo?.get(player.id) == true
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(player.username, fontWeight = if (player.id == currentUserId) FontWeight.Bold else FontWeight.Normal)
+                        Icon(
+                            imageVector = if (hasSubmitted) Icons.Default.CheckCircle else Icons.Default.HourglassEmpty,
+                            contentDescription = if (hasSubmitted) "Submitted" else "Waiting",
+                            tint = if (hasSubmitted) Color.Green else Color.Gray
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Unos reči
+        if (mySubmissionStatus) {
+            Text("Word submitted! Waiting for other players...", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        } else {
+            OutlinedTextField(
+                value = word,
+                onValueChange = { word = it },
+                label = { Text("Enter a 5 or 6 letter word") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { if (word.isNotBlank()) onSubmitWord(word) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = word.isNotBlank()
+            ) {
+                Text("Submit Word")
+            }
+        }
+    }
+}
+
 
 @Composable
 fun WaitingView(players: List<PlayerData>, isHost: Boolean, onStartClick: () -> Unit) {
@@ -149,7 +200,8 @@ fun InProgressView(state: com.program.connectaword.data.GameState, lobbyViewMode
     Column(modifier = Modifier.fillMaxSize()) {
         HeaderView(
             currentRound = (myPlayerData?.currentWordIndex ?: 0) + 1,
-            totalRounds = 5
+            // --- IZMENA: Koristimo dinamički broj rundi ---
+            totalRounds = state.totalRounds
         )
         Spacer(modifier = Modifier.height(16.dp))
         PlayersPanel(players = state.players)
@@ -215,6 +267,7 @@ fun CurrentPlayerProgressView(progress: PlayerProgress, onGuess: (String) -> Uni
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
+            // --- IZMENA: Prikazujemo pattern direktno ---
             text = progress.pattern,
             fontSize = 32.sp,
             letterSpacing = 4.sp,

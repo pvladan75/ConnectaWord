@@ -3,14 +3,14 @@ package com.program.connectaword.ui.lobby
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.program.connectaword.api.ApiClient
 import com.program.connectaword.api.WebSocketService
 import com.program.connectaword.data.*
 import com.program.connectaword.repository.LobbyRepository
-import com.program.connectaword.repository.LobbyRepositoryImpl
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class LobbyState(
     val isLoading: Boolean = false,
@@ -24,13 +24,22 @@ data class CreateRoomState(
     val error: String? = null
 )
 
-class LobbyViewModel : ViewModel() {
-    private val lobbyRepository: LobbyRepository by lazy { LobbyRepositoryImpl(ApiClient.getApiService()) }
-    private val webSocketService = WebSocketService()
+@HiltViewModel
+class LobbyViewModel @Inject constructor(
+    private val lobbyRepository: LobbyRepository,
+    private val webSocketService: WebSocketService,
+    private val sessionManager: com.program.connectaword.data.SessionManager
+) : ViewModel() {
     private var webSocketJob: Job? = null
 
-    private val _lobbyState = MutableStateFlow(LobbyState())
-    val lobbyState: StateFlow<LobbyState> = _lobbyState
+    val lobbyState: StateFlow<LobbyState> = lobbyRepository.getAllRooms()
+        .map { rooms -> LobbyState(rooms = rooms) }
+        .onStart { refreshRooms() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = LobbyState(isLoading = true)
+        )
 
     private val _createRoomState = MutableStateFlow(CreateRoomState())
     val createRoomState: StateFlow<CreateRoomState> = _createRoomState
@@ -42,7 +51,6 @@ class LobbyViewModel : ViewModel() {
     val announcements = _announcements.asStateFlow()
 
     init {
-        getRooms()
         observeWebSocketMessages()
     }
 
@@ -56,15 +64,23 @@ class LobbyViewModel : ViewModel() {
                         _gameState.value = gameMessage.gameState
                     }
                     is Announcement -> {
-                        _announcements.update { currentAnnouncements ->
+                        _announcements.update { currentAnnouncements: List<String> ->
                             listOf(gameMessage.message) + currentAnnouncements
                         }
                     }
+                    // Dodajemo SubmitWord u else granu da ne bi bio logovan kao neočekivana poruka
+                    is SubmitWord -> { /* Ne radimo ništa, klijent samo šalje ovu poruku */ }
                     else -> {
                         Log.w("LobbyViewModel", "Received unexpected message type: $gameMessage")
                     }
                 }
             }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            sessionManager.clearSession()
         }
     }
 
@@ -81,6 +97,8 @@ class LobbyViewModel : ViewModel() {
     fun sendPlayAgainMessage() = sendMessage(PlayAgain())
     fun sendGuess(guess: String) = sendMessage(MakeGuess(guess))
     fun sendSurrenderMessage() = sendMessage(SurrenderRound())
+    // --- NOVA FUNKCIJA ---
+    fun sendSubmitWordMessage(word: String) = sendMessage(SubmitWord(word))
 
     private fun sendMessage(message: GameMessage) {
         viewModelScope.launch {
@@ -88,20 +106,14 @@ class LobbyViewModel : ViewModel() {
         }
     }
 
-    fun getRooms() {
+    fun refreshRooms() {
         viewModelScope.launch {
-            _lobbyState.value = LobbyState(isLoading = true)
-            try {
-                val response = lobbyRepository.getRooms()
-                if (response.isSuccessful && response.body() != null) {
-                    _lobbyState.value = LobbyState(rooms = response.body()!!)
-                } else {
-                    _lobbyState.value = LobbyState(error = "Failed to fetch rooms")
-                }
-            } catch (e: Exception) {
-                _lobbyState.value = LobbyState(error = e.message ?: "An unknown error occurred")
-            }
+            lobbyRepository.refreshRooms()
         }
+    }
+
+    fun getRooms() {
+        refreshRooms()
     }
 
     fun createRoom(roomName: String, language: String, wordSource: String) {
